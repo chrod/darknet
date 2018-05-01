@@ -130,7 +130,9 @@ void *detect_in_thread(void *ptr)
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
     image display = buff[(buff_index+2) % 3];
-    draw_detections(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);
+    // chrod: add writing output predictions to file
+    FILE *fp;
+    draw_detections_file(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes, fp);
     free_detections(dets, nboxes);
 
     demo_index = (demo_index + 1)%demo_frame;
@@ -264,6 +266,8 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         pthread_join(detect_thread, 0);
         ++count;
     }
+    //free(FILE);
+    //FILE = NULL;
 }
 
 /*
