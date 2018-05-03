@@ -315,7 +315,7 @@ void draw_detections_file(image im, detection *dets, int num, float thresh, char
 
     // chrod: also print detections to file (shame on you if the pointer is bad)
     fp = fopen("output.json", "w+");
-    fprintf(fp, "{ ");
+    fprintf(fp, "{");
 
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
@@ -329,11 +329,11 @@ void draw_detections_file(image im, detection *dets, int num, float thresh, char
                     strcat(labelstr, ", ");
                     strcat(labelstr, names[j]);
                 }
+
                 printf("%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
                 // chrod: print detections to file
-                fprintf(fp, "    \"%s\": %.3f", names[j], dets[i].prob[j]);
-                if (i < num && num > 1) { fprintf(fp, ", "); }
-                fprintf(fp, "");
+                if (i > 0 && dets[i].prob[j] > thresh) { fprintf(fp, ", "); }
+                fprintf(fp, "'%s': %.3f", names[j], dets[i].prob[j]);
             }
         }
 
