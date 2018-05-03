@@ -332,7 +332,7 @@ void draw_detections_file(image im, detection *dets, int num, float thresh, char
                 printf("%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
                 // chrod: print detections to file
                 fprintf(fp, "    \"%s\": %.3f", names[j], dets[i].prob[j]);
-                if (i < num) { fprintf(fp, ", "); }
+                if (i < num && num > 1) { fprintf(fp, ", "); }
                 fprintf(fp, "");
             }
         }
