@@ -10,7 +10,7 @@
 #include <sys/time.h>
 
 #define DEMO 1
-
+char* dets_str;
 #ifdef OPENCV
 
 static char **demo_names;
@@ -83,6 +83,14 @@ detection *avg_predictions(network *net, int *nboxes)
     return dets;
 }
 
+void *socket_server_thread(void *ptr)
+{
+  
+  int sck_svr = socket_server(dets_str);
+  //free(dets_str);
+  return 0;
+}
+
 void *detect_in_thread(void *ptr)
 {
     running = 1;
@@ -132,14 +140,15 @@ void *detect_in_thread(void *ptr)
     image display = buff[(buff_index+2) % 3];
     
     // chrod: obtain list of detected items
-    char* dets_str = draw_detections_str(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes); 
-      
+    //char* dets_str = draw_detections_str(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes); 
+    dets_str = draw_detections_str(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);     
+  
     // chrod: add writing output predictions to file
     FILE *fp;
     fp = fopen("output.json", "w+");
     fprintf(fp, dets_str);
     fclose(fp);
-    free(dets_str);
+    //free(dets_str);
     
     free_detections(dets, nboxes);
 
@@ -206,6 +215,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     set_batch_network(net, 1);
     pthread_t detect_thread;
     pthread_t fetch_thread;
+    pthread_t socket_thread;
 
     srand(2222222);
 
@@ -255,6 +265,9 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         }
     }
 
+    // chrod: add sockets support in own threads
+    if(pthread_create(&socket_thread, 0, socket_server_thread, 0)) error("Socket server thread creation failed");
+
     demo_time = what_time_is_it_now();
 
     while(!demo_done){
@@ -270,6 +283,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
           sprintf(name, "%s_%08d", prefix, count);
           save_image(buff[(buff_index + 1)%3], name);
       }
+ 
       pthread_join(fetch_thread, 0);
       pthread_join(detect_thread, 0);
       ++count;
