@@ -23,6 +23,7 @@ float get_color(int c, int x, int max);
 void draw_box(image a, int x1, int y1, int x2, int y2, float r, float g, float b);
 void draw_bbox(image a, box bbox, int w, float r, float g, float b);
 void write_label(image a, int r, int c, image *characters, char *string, float *rgb);
+char* draw_detections_str(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes);
 image image_distance(image a, image b);
 void scale_image(image m, float s);
 image rotate_crop_image(image im, float rad, float s, int w, int h, float dx, float dy, float aspect);

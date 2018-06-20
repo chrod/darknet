@@ -309,13 +309,15 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
     }
 }
 
-void draw_detections_file(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes, FILE *fp)
+char* draw_detections_str(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes)
 {
     int i,j;
 
     // chrod: also print detections to file (shame on you if the pointer is bad)
-    fp = fopen("output.json", "w+");
-    fprintf(fp, "{");
+    const int MAX_BUF = 1000;
+    char* Buffer = malloc(MAX_BUF);
+    int str_len = 0;
+    str_len += snprintf(Buffer+str_len, MAX_BUF-str_len, "{");
 
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
@@ -329,38 +331,27 @@ void draw_detections_file(image im, detection *dets, int num, float thresh, char
                     strcat(labelstr, ", ");
                     strcat(labelstr, names[j]);
                 }
-
                 printf("%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
                 // chrod: print detections to file
-                if (i > 0 && dets[i].prob[j] > thresh) { fprintf(fp, ", "); }
-                fprintf(fp, "\"%s\": %.3f", names[j], dets[i].prob[j]);
+                if (i > 0 && dets[i].prob[j] > thresh) { 
+                    str_len += snprintf(Buffer+str_len, MAX_BUF-str_len, ",");
+                }
+                str_len += snprintf(Buffer+str_len, MAX_BUF-str_len, "\"%s\": %.3f", names[j], dets[i].prob[j]);
             }
         }
-
         if(class >= 0){
             int width = im.h * .006;
 
-            /*
-               if(0){
-               width = pow(prob, 1./2.)*10+1;
-               alphabet = 0;
-               }
-             */
-
-            //printf("%d %s: %.0f%%\n", i, names[class], prob*100);
             int offset = class*123457 % classes;
             float red = get_color(2,offset,classes);
             float green = get_color(1,offset,classes);
             float blue = get_color(0,offset,classes);
             float rgb[3];
 
-            //width = prob*20+2;
-
             rgb[0] = red;
             rgb[1] = green;
             rgb[2] = blue;
             box b = dets[i].bbox;
-            //printf("%f %f %f %f\n", b.x, b.y, b.w, b.h);
 
             int left  = (b.x-b.w/2.)*im.w;
             int right = (b.x+b.w/2.)*im.w;
@@ -372,12 +363,13 @@ void draw_detections_file(image im, detection *dets, int num, float thresh, char
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
+
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
                 image label = get_label(alphabet, labelstr, (im.h*.03));
                 draw_label(im, top + width, left, label, rgb);
-                free_image(label);
-            }
+                free_image(label); 
+            }   
             if (dets[i].mask){
                 image mask = float_to_image(14, 14, 1, dets[i].mask);
                 image resized_mask = resize_image(mask, b.w*im.w, b.h*im.h);
@@ -386,13 +378,14 @@ void draw_detections_file(image im, detection *dets, int num, float thresh, char
                 free_image(mask);
                 free_image(resized_mask);
                 free_image(tmask);
-            }
-        }
-    }
-    // chrod: close output file
-    fprintf(fp, "}");
-    fclose(fp);
-}
+            }   
+        }   
+    }   
+    
+    //// chrod: close output file
+    str_len += snprintf(Buffer+str_len, MAX_BUF-str_len, "}");
+    return Buffer;
+}   
 
 void transpose_image(image im)
 {
