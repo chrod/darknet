@@ -132,8 +132,7 @@ void *detect_in_thread(void *ptr)
     image display = buff[(buff_index+2) % 3];
     
     // chrod: obtain list of detected items
-    char* dets_str = draw_detections_str(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);
-    printf("dets=%s\n", dets_str);
+    char* dets_str = draw_detections_str(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes); 
       
     // chrod: add writing output predictions to file
     FILE *fp;
