@@ -9,19 +9,8 @@
 #include "demo.h"
 #include <sys/time.h>
 
-#include <netinet/in.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#define PORT 8750
-int newsockfd = -1;
-#define TRUE 1
 #define DEMO 1
+
 #ifdef OPENCV
 
 static char **demo_names;
@@ -143,13 +132,9 @@ void *detect_in_thread(void *ptr)
     image display = buff[(buff_index+2) % 3];
     
     // chrod: obtain list of detected items
-    char *dets_str = draw_detections_str(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);
+    char* dets_str = draw_detections_str(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);
     printf("dets=%s\n", dets_str);
-    
-    // chrod: write output predictions to socket
-    int n;
-    n = write(newsockfd, &dets_str, sizeof(dets_str));
-  
+      
     // chrod: add writing output predictions to file
     FILE *fp;
     fp = fopen("output.json", "w+");
@@ -273,74 +258,23 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 
     demo_time = what_time_is_it_now();
 
-    setlinebuf(stdout);
-
-    int sockfd, newsockfd, clilen, pid;
-    struct sockaddr_in serv_addr, cli_addr;
-
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-    if (sockfd < 0) {
-      error("ERROR opening socket");
-    }
-
-    memset((char *) &serv_addr, 0, sizeof(serv_addr));
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(PORT);
-
-    printf("Server listening on %d\n", PORT);
-
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-      error("ERROR on binding");
-    }
-
-    listen(sockfd, 5);
-    clilen = sizeof(cli_addr);
-
-    printf("Waiting to accept client connections\n");
-
     while(!demo_done){
-    // socket stuff
-    //while (TRUE) {
-      newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-
-      if (newsockfd < 0) {
-        error("ERROR on accept");
+      buff_index = (buff_index + 1) %3;
+      if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
+      if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
+      if(!prefix){
+          fps = 1./(what_time_is_it_now() - demo_time);
+          demo_time = what_time_is_it_now();
+          display_in_thread(0);   
+      }else{
+          char name[256];
+          sprintf(name, "%s_%08d", prefix, count);
+          save_image(buff[(buff_index + 1)%3], name);
       }
-
-      printf("New client connection\n");
-
-      pid = fork();
-      if (pid < 0) {
-          error("ERROR on fork");
-      }
-
-      if (pid == 0)  {
-          //handle_client_comm(newsockfd);
-    /// socket stuff ^^
-
-    //while(!demo_done){
-          buff_index = (buff_index + 1) %3;
-          if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
-          if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
-          if(!prefix){
-              fps = 1./(what_time_is_it_now() - demo_time);
-              demo_time = what_time_is_it_now();
-              display_in_thread(0);
-          }else{
-              char name[256];
-              sprintf(name, "%s_%08d", prefix, count);
-              save_image(buff[(buff_index + 1)%3], name);
-          }
-          pthread_join(fetch_thread, 0);
-          pthread_join(detect_thread, 0);
-          ++count;
-          close(newsockfd);
-      } else {
-      } close(newsockfd);
-   }   
+      pthread_join(fetch_thread, 0);
+      pthread_join(detect_thread, 0);
+      ++count;
+    }   
     //free(FILE);
     //FILE = NULL;
 }
